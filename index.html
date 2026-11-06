@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phantom Grid</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <span class="hud-item"><span class="hl">SCORE </span><span class="hv" id="h-score">0</span></span>
+  <span class="hud-item"><span class="hl">BEST </span><span class="hv" id="h-best">0</span></span>
+  <span class="hud-item"><span class="hl">GOLD </span><span class="hv" id="h-gold">0/0</span></span>
+  <span class="hud-item"><span class="hl">TIME </span><span class="hv" id="h-time">0:00</span></span>
+  <span class="hud-item"><span class="hl">LIVES </span><span class="hv" id="h-lives">3</span></span>
+  <span class="hud-item"><span class="hl">LVL </span><span class="hv" id="h-lvl">1</span></span>
+</div>
+
+<div id="wrap">
+<canvas id="gc"></canvas>
+
+<!-- COUNTDOWN -->
+<div id="countdown-wrap" class="hidden"><div id="countdown-num">3</div></div>
+
+<!-- DIG BUTTONS OVERLAY -->
+<div id="dig-overlay" style="position:absolute;bottom:12px;left:0;right:0;display:none;justify-content:center;gap:16px;z-index:61;pointer-events:none;">
+  <button class="dig-ovl-btn" onpointerdown="tryDig('left')">◀ DIG</button>
+  <button class="dig-ovl-btn" onpointerdown="tryDig('right')">DIG ▶</button>
+</div>
+
+<!-- TITLE / MAIN MENU -->
+<div id="title-ov" class="ov">
+  <div class="obg"></div>
+  <div class="oc">
+    <div class="title">PHANTOM GRID</div>
+    <div class="sub">COLLECT ALL ORBS · DIG · TRAP · ESCAPE</div>
+    <div class="hs" id="t-hs"></div>
+    <div class="menu-btns">
+      <button class="btn btn-teal" onclick="startGame()">▶ PLAY</button>
+      <button class="btn btn-outline" onclick="showLevelSelect()">⊞ LEVEL SELECT</button>
+      <button class="btn btn-outline" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
+      <button class="btn btn-outline" onclick="showTutorial()">? HOW TO PLAY</button>
+      <button class="btn btn-muted" onclick="openSettings()">⚙ SETTINGS</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameover-ov" class="ov hidden">
+  <div class="obg"></div>
+  <div class="oc">
+    <div class="go-title">GAME OVER</div>
+    <div class="go-score" id="go-score">SCORE: 0</div>
+    <div class="go-best" id="go-best">BEST: 0</div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-teal" onclick="playAgain()">PLAY AGAIN</button>
+      <button class="btn btn-muted" onclick="goMainMenu()">MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div id="pause-ov" class="ov hidden">
+  <div class="obg" style="background:rgba(0,0,0,.7);"></div>
+  <div class="oc">
+    <div class="p-title">PAUSED</div>
+    <div class="p-sub" id="pause-info">LVL 1 · SCORE 0</div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-teal" onclick="togglePause()">RESUME</button>
+      <button class="btn btn-muted" onclick="goMainMenu()">MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- LEVEL SELECT -->
+<div id="levelsel-ov" class="ov hidden">
+  <div class="obg"></div>
+  <div class="oc">
+    <div class="ls-title">SELECT LEVEL</div>
+    <div class="ls-grid" id="ls-grid"></div>
+    <button class="btn btn-muted" style="margin-top:10px;" onclick="showMainMenu()">← BACK</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="lb-ov" class="ov hidden">
+  <div class="obg"></div>
+  <div class="oc">
+    <div class="lb-title">LEADERBOARD</div>
+    <div class="lb-tabs" id="lb-tabs"></div>
+    <table class="lb-table" id="lb-table">
+      <tr><th>#</th><th>NAME</th><th>SCORE</th><th>TIME</th></tr>
+    </table>
+    <button class="btn btn-muted" style="margin-top:10px;" onclick="showMainMenu()">← BACK</button>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-ov" class="ov hidden">
+  <div class="obg"></div>
+  <div class="oc">
+    <div style="font-size:11px;font-weight:700;color:#2dd4bf;letter-spacing:3px;margin-bottom:8px;">SETTINGS</div>
+    <div class="stabs">
+      <button class="stab active" onclick="switchStab('game',this)">GAME</button>
+      <button class="stab" onclick="switchStab('audio',this)">AUDIO</button>
+      <button class="stab" onclick="switchStab('dev',this)">DEV</button>
+    </div>
+    <!-- GAME TAB -->
+    <div id="stab-game" class="s-section">
+      <div class="s-row"><span>SPEED <span id="sp-val">Normal</span></span><input type="range" id="sp-sl" min="1" max="5" value="3" oninput="applySpeed(this.value)"></div>
+      <div class="s-row"><span>DIFFICULTY <span id="df-val">Normal</span></span><input type="range" id="df-sl" min="1" max="3" value="2" oninput="applyDifficulty(this.value)"></div>
+      <div class="s-row"><span>LADDER ASSIST</span><label class="s-toggle"><input type="checkbox" id="la-tog" checked onchange="ladderAssistEnabled=this.checked;localStorage.setItem('pg_ladder_assist',this.checked?1:0)"><div class="s-track"></div></label></div>
+      <div class="s-row"><span>DIG BUTTONS</span><label class="s-toggle"><input type="checkbox" id="db-tog" onchange="toggleDigButtons(this.checked)"><div class="s-track"></div></label></div>
+      <div class="s-row"><span>CHANGE PLAYER</span><button class="btn btn-muted" style="font-size:7px;padding:4px 8px;" onclick="changePlayer()">CHANGE</button></div>
+    </div>
+    <!-- AUDIO TAB -->
+    <div id="stab-audio" class="s-section" style="display:none;">
+      <div class="s-row"><span>SOUND EFFECTS</span><label class="s-toggle"><input type="checkbox" id="snd-tog" checked onchange="soundEnabled=this.checked"><div class="s-track"></div></label></div>
+      <div class="s-row"><span>SHOW FPS</span><label class="s-toggle"><input type="checkbox" id="fps-tog" onchange="showFPS=this.checked"><div class="s-track"></div></label></div>
+    </div>
+    <!-- DEV TAB -->
+    <div id="stab-dev" class="s-section" style="display:none;">
+      <div style="font-size:9px;font-weight:700;color:#2dd4bf;letter-spacing:2px;">DEV MODE 🔓</div>
+      <button class="btn btn-outline" onclick="devUnlockAll()" style="font-size:8px;padding:7px;">UNLOCK ALL LEVELS</button>
+      <button class="btn btn-red" onclick="devReset()" style="font-size:8px;padding:7px;">RESET ALL PROGRESS</button>
+      <div style="font-size:8px;color:#64748b;letter-spacing:1px;margin-top:4px;">JUMP TO LEVEL</div>
+      <div class="dev-grid" id="dev-lvl-grid"></div>
+      <div id="dev-msg" style="font-size:8px;color:#2dd4bf;min-height:14px;"></div>
+    </div>
+    <button class="btn btn-teal" onclick="closeSettings()" style="margin-top:10px;">CLOSE ✕</button>
+  </div>
+</div>
+
+<!-- INITIALS MODAL -->
+<div id="initials-modal" class="hidden">
+  <div class="im-box">
+    <div class="im-title">🏆 HIGH SCORE!</div>
+    <div class="im-score" id="im-score-txt"></div>
+    <div id="im-confirm-section">
+      <div class="im-confirm" id="im-saved-initials"></div>
+      <div style="font-size:8px;color:#64748b;margin-bottom:8px;">Is this you?</div>
+      <div class="im-row">
+        <button class="btn btn-teal" style="font-size:8px;padding:6px 10px;" onclick="confirmInitials()">YES, THAT'S ME</button>
+        <button class="btn btn-muted" style="font-size:8px;padding:6px 10px;" onclick="showInitialsInput()">CHANGE</button>
+      </div>
+    </div>
+    <div id="im-input-section" style="display:none;flex-direction:column;align-items:center;gap:8px;">
+      <div style="font-size:8px;color:#64748b;">ENTER 3 INITIALS</div>
+      <input class="im-input" id="im-input" maxlength="3" placeholder="JAH" oninput="this.value=this.value.toUpperCase()">
+      <div class="im-row">
+        <button class="btn btn-teal" style="font-size:8px;padding:6px 10px;" onclick="saveInitials()">SAVE</button>
+        <button class="btn btn-muted" style="font-size:8px;padding:6px 10px;" onclick="skipInitials()">SKIP</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CREDITS -->
+<div id="credits-ov" class="ov hidden">
+  <div class="obg"></div>
+  <div id="credits-scroll">
+    <div style="height:300px;"></div>
+    <div class="cr-big">PHANTOM GRID</div>
+    <div class="cr-med">A GAME BY JAAMI HASAN</div>
+    <div class="cr-line"></div>
+    <div class="cr-sec">DEVELOPMENT</div>
+    <div class="cr-row"><span class="cr-lbl">Game Design</span><span class="cr-val">JAAMI HASAN</span><span class="cr-lbl">Programming</span><span class="cr-val">JAAMI HASAN</span><span class="cr-lbl">Level Design</span><span class="cr-val">JAAMI HASAN</span><span class="cr-lbl">Art Direction</span><span class="cr-val">JAAMI HASAN</span><span class="cr-lbl">Sound Design</span><span class="cr-val">JAAMI HASAN</span><span class="cr-lbl">QA Testing</span><span class="cr-val">JAAMI HASAN</span></div>
+    <div class="cr-line"></div>
+    <div class="cr-sec">TECHNOLOGY</div>
+    <div class="cr-row"><span class="cr-lbl">Swift / SpriteKit</span><span class="cr-val">iOS Native</span><span class="cr-lbl">JavaScript</span><span class="cr-val">Web Prototype</span><span class="cr-lbl">Python + BFS</span><span class="cr-val">Level Verify</span><span class="cr-lbl">Claude Code</span><span class="cr-val">AI Dev Partner</span></div>
+    <div class="cr-line"></div>
+    <div class="cr-sec">THE LEVELS</div>
+    <div class="cr-row" id="cr-levels"></div>
+    <div class="cr-line"></div>
+    <div class="cr-sec">SPECIAL THANKS</div>
+    <div class="cr-sm">To everyone who played the beta</div>
+    <div class="cr-sm">Built with Claude — Anthropic</div>
+    <div class="cr-sm">Ascendance · 2026</div>
+    <div class="cr-line"></div>
+    <div class="cr-big" style="font-size:18px;">PHANTOM GRID</div>
+    <div class="cr-sm">Version 1.0 · © 2026 Jaami Hasan</div>
+    <div class="cr-sm">jaamihasan.com</div>
+    <div style="height:100px;"></div>
+    <button class="btn btn-outline" onclick="endCredits()">MAIN MENU</button>
+    <div style="height:200px;"></div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<div id="ctrl">
+  <div class="cg">
+    <div class="cl">MOVE</div>
+    <div class="dpad">
+      <div class="bk empty"></div>
+      <button class="bk" id="btn-up" onpointerdown="btnD('up')" onpointerup="btnU('up')" onpointerleave="btnU('up')">▲</button>
+      <div class="bk empty"></div>
+      <button class="bk" id="btn-left" onpointerdown="btnD('left')" onpointerup="btnU('left')" onpointerleave="btnU('left')">◀</button>
+      <button class="bk" id="btn-down" onpointerdown="btnD('down')" onpointerup="btnU('down')" onpointerleave="btnU('down')">▼</button>
+      <button class="bk" id="btn-right" onpointerdown="btnD('right')" onpointerup="btnU('right')" onpointerleave="btnU('right')">▶</button>
+    </div>
+  </div>
+  <div class="cg">
+    <div class="cl">DIG</div>
+    <div class="dig-btns">
+      <button class="bk dig" onpointerdown="tryDig('left')">◀ DIG</button>
+      <button class="bk dig" onpointerdown="tryDig('right')">DIG ▶</button>
+    </div>
+  </div>
+</div>
+<div id="info"><span style="color:#2dd4bf;">ARROWS</span> move · <span style="color:#2dd4bf;">Z/X</span> dig · <span style="color:#2dd4bf;">P</span> pause · dig the floor too</div>
+
+<script src="js/game.js"></script>
+</body>
+</html>
